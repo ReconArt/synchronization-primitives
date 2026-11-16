@@ -9,7 +9,7 @@
 - Object-scoped synchronization using unique identifiers
 - Support for both synchronous and asynchronous locking mechanisms
 - Configurable concurrency limits for locks
-- Compatible with .NET 9, .NET 8, .NET Standard 2.1, and .NET Standard 2.0
+- Compatible with .NET 10 and .NET 11
 
 ## Installation
 

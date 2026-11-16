@@ -9,7 +9,7 @@
 - Fair distribution of limited resources
 - Support for priority-based distribution
 - Optimized for 6 priorities (0 to 5)
-- Compatible with .NET 9 and .NET 8
+- Compatible with .NET 10 and .NET 11
 
 ## Installation
 

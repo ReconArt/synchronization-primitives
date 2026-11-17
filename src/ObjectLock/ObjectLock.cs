@@ -12,7 +12,11 @@ namespace ReconArt.Synchronization
     /// </summary>
     public sealed class ObjectLock : IDisposable
     {
+#if NETCOREAPP1_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         private static readonly ReaderWriterLockSlim s_syncLock = new ReaderWriterLockSlim();
+#else
+        private static readonly ReaderWriterLock s_syncLock = new ReaderWriterLock();
+#endif
         private static readonly ConcurrentDictionary<(Type, string), Lock> s_locks = new ConcurrentDictionary<(Type, string), Lock>();
         private static bool _backgroundWorkerStarted;
         private readonly (Type, string) _key;
@@ -182,14 +186,22 @@ namespace ReconArt.Synchronization
 
         private static void InitializeLock((Type, string) key)
         {
+#if NETCOREAPP1_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
             s_syncLock.EnterReadLock();
+#else
+            s_syncLock.AcquireReaderLock(Timeout.Infinite);
+#endif
             try
             {
                 Interlocked.Increment(ref s_locks.GetOrAdd(key, key => new Lock()).Instances);
             }
             finally
             {
+#if NETCOREAPP1_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
                 s_syncLock.ExitReadLock();
+#else
+                s_syncLock.ReleaseReaderLock();
+#endif
             }
         }
 
@@ -230,14 +242,22 @@ namespace ReconArt.Synchronization
                     // Trim locks if there are more than 50,000 locks, or it has been more than 24 hours since the last trim.
                     if (s_locks.Count >= 50000 || lastTrim.AddHours(24) <= DateTime.UtcNow)
                     {
+#if NETCOREAPP1_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
                         s_syncLock.EnterUpgradeableReadLock();
+#else
+                        s_syncLock.AcquireReaderLock(Timeout.Infinite);
+#endif
                         try
                         {
                             foreach (KeyValuePair<(Type, string), Lock> lockEntry in s_locks)
                             {
                                 if (Volatile.Read(ref lockEntry.Value.Instances) == 0)
                                 {
+#if NETCOREAPP1_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
                                     s_syncLock.EnterWriteLock();
+#else
+                                    LockCookie lc = s_syncLock.UpgradeToWriterLock(Timeout.Infinite);
+#endif
                                     try
                                     {
                                         // Because we use a readable lock for getting **OR ADDING** a HashLock, it's possible the instances value had changed.
@@ -251,14 +271,22 @@ namespace ReconArt.Synchronization
                                     }
                                     finally
                                     {
+#if NETCOREAPP1_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
                                         s_syncLock.ExitWriteLock();
+#else
+                                        s_syncLock.DowngradeFromWriterLock(ref lc);
+#endif
                                     }
                                 }
                             }
                         }
                         finally
                         {
+#if NETCOREAPP1_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
                             s_syncLock.ExitUpgradeableReadLock();
+#else
+                            s_syncLock.ReleaseReaderLock();
+#endif
                         }
 
                         lastTrim = DateTime.UtcNow;

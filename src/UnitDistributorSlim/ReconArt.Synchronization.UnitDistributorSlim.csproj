@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ReconArt.PriorityQueue" Version="1.*"/>
+    <PackageReference Include="ReconArt.PriorityQueue" Version="2.*"/>
   </ItemGroup>
 
 </Project>
